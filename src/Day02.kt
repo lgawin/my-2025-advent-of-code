@@ -1,4 +1,6 @@
 import java.math.BigInteger
+import kotlin.collections.buildSet
+import kotlin.ranges.step
 
 fun main() {
 
@@ -81,25 +83,56 @@ fun log(s: String) = Unit
 
 fun checkRange2(input: String): BigInteger {
     val (first, second) = input.split("-")
-    var result = BigInteger.ZERO
-    var item = first.toBigInteger()
-    val stop = second.toBigInteger()
-    while (item <= stop) {
-        if (isInvalidId2(item.toString())) {
-            result += item
-        }
-        item += BigInteger.ONE
-    }
-    return result
+    return checkRange2(first, second).sumOf { it }
 }
 
-fun isInvalidId2(id: String): Boolean {
-    if (id.length < 2) return false
-    (id.length / 2).downTo(2).forEach { len ->
-        if (id.length > len && id.length % len == 0) {
-            val chunked = id.chunked(len)
-            if (chunked.all { chunk -> chunk == chunked.first() }) return true
+private fun checkRange2(first: String, second: String): Set<BigInteger> {
+    require(first.toBigInteger() <= second.toBigInteger()) { "invalid start $first and end $second" }
+    return if (first.length != second.length) {
+        if (first.length > second.length) return emptySet()
+        buildSet {
+            var a = first
+            (first.length..second.length).forEach {
+                val b = "9".repeat(it).toBigInteger().coerceAtMost(second.toBigInteger())
+                log("$a --> $b")
+                addAll(checkRange2(a, b.toString()))
+                a = ("1" + "0".repeat(it))
+            }
+        }
+    } else {
+        buildSet {
+            (first.length / 2).downTo(1).forEach { len ->
+                if (first.length > len && first.length % len == 0) {
+                    addAll(
+                        checkRange2(
+                            first.toBigInteger(),
+                            second.toBigInteger(),
+                            factor1 = len,
+                            factor2 = first.length / len
+                        )
+                    )
+                }
+            }
         }
     }
-    return id.all { c -> c == id.first() }
+}
+
+private fun checkRange2(start: BigInteger, end: BigInteger, factor1: Int, factor2: Int): Set<BigInteger> {
+    log("$start - $end / by $factor1")
+    val pattern = "1" + "0".repeat(factor1 - 1)
+    val seed = pattern.repeat(factor2)
+    val step = (("1" + "0".repeat(factor1 - 1)).repeat(factor2 - 1) + "1").toBigInteger()
+    log("$seed / $step")
+
+    var x = seed.toBigInteger()
+    while (x < start) {
+        x += step
+    }
+    return buildSet {
+        while (x <= end) {
+            log(" acc: $x")
+            add(x)
+            x += step
+        }
+    }
 }

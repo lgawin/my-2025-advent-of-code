@@ -1,7 +1,8 @@
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
-import kotlin.test.Ignore
+import kotlin.math.log10
+import kotlin.random.Random
 import kotlin.test.assertEquals
 
 class Day02Test {
@@ -95,15 +96,6 @@ class Day02Test {
     @Nested
     inner class Part2 {
 
-        //        @Test
-        fun foo() {
-            (1..1000000000000000)
-                .asSequence()
-                .map { it.toString() }
-                .filter { isInvalidId2(it) }
-                .forEach { println(it) }
-        }
-
         @Test
         fun `test 01`() {
             // 11, 22
@@ -173,18 +165,21 @@ class Day02Test {
         }
 
         @Test
-        @Ignore
         fun `test 12`() {
-            val a = checkRange2("10-99")
-            val b = checkRange2("1000-10000")
-            val c = checkRange2("100000-1000000")
-            val d = checkRange2("10000000-100000000")
-            val e = checkRange2("1000000000-10000000000")
-            val f = checkRange2("100000000000-1000000000000")
+            val a = checkRange2("1-100")
+            val b = checkRange2("101-1000")
+            val c = checkRange2("1001-10000")
+            val d = checkRange2("1${"0".repeat(4)}-${"9".repeat(8)}")
+            val e = checkRange2("1${"0".repeat(8)}-${"9".repeat(9)}")
+            val f = checkRange2("1${"0".repeat(9)}-${"9".repeat(10)}")
             assertEquals(495.toBigInteger(), a)
-            assertEquals(495405.toBigInteger(), b)
-            assertEquals((495 + 495405).toBigInteger(), checkRange2("10-10000"))
-            assertEquals((a + b + c + d + e + f), checkRange2("1-1000000000000"))
+            assertEquals(4995.toBigInteger(), b)
+            assertEquals(495405.toBigInteger(), c)
+            assertEquals(a + b + c, checkRange2("1-10000"))
+            assertEquals(495594585450.toBigInteger(), d)
+            assertEquals(495045044550.toBigInteger(), e)
+            assertEquals(495445904500410.toBigInteger(), f)
+            assertEquals(a + b + c + d + e + f, checkRange2("1-${"9".repeat(10)}"))
         }
     }
 }
