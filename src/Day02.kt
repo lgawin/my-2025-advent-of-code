@@ -6,8 +6,9 @@ fun main() {
         acc + checkRange(string)
     }
 
-    fun part2(input: List<String>): BigInteger = 4174379265.toBigInteger()
-
+    fun part2(input: List<String>): BigInteger = input.fold(BigInteger.ZERO) { acc, string ->
+        acc + checkRange2(string)
+    }
     // Test if implementation meets criteria from the description
     val testInput = listOf(
         "11-22",
@@ -28,7 +29,7 @@ fun main() {
     // Read the input from the `src/Day02.txt` file.
     val input = readInput("Day02").single().split(",")
     part1(input).println()
-//    part2(input).println()
+    part2(input).println()
 }
 
 fun checkRange(input: String): BigInteger {
@@ -77,3 +78,28 @@ fun checkRange(firstId: BigInteger, lastId: BigInteger, step: BigInteger): BigIn
 }
 
 fun log(s: String) = Unit
+
+fun checkRange2(input: String): BigInteger {
+    val (first, second) = input.split("-")
+    var result = BigInteger.ZERO
+    var item = first.toBigInteger()
+    val stop = second.toBigInteger()
+    while (item <= stop) {
+        if (isInvalidId2(item.toString())) {
+            result += item
+        }
+        item += BigInteger.ONE
+    }
+    return result
+}
+
+fun isInvalidId2(id: String): Boolean {
+    if (id.length < 2) return false
+    (id.length / 2).downTo(2).forEach { len ->
+        if (id.length > len && id.length % len == 0) {
+            val chunked = id.chunked(len)
+            if (chunked.all { chunk -> chunk == chunked.first() }) return true
+        }
+    }
+    return id.all { c -> c == id.first() }
+}
