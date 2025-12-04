@@ -69,6 +69,6 @@ private fun getMaxBattery(
     return ret
 }
 
-fun log(s: String, forceLog: Boolean = false) =
+private fun log(s: String, forceLog: Boolean = false) =
     if (forceLog) println(s) else Unit
 // 	println(s)
