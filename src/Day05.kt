@@ -56,22 +56,28 @@ fun main() {
     part2(input).println()
 }
 
+val ingredientsRangesComparator: (Pair<Long, Long>, Pair<Long, Long>) -> Int = { candidate, element ->
+    when {
+        element.first in candidate.first..candidate.second -> 0
+        element.second in candidate.first..candidate.second -> 0
+        element.first < candidate.first -> 1
+        element.first > candidate.second -> -1
+        else -> TODO()
+    }
+}
+
 fun MutableList<Pair<Long, Long>>.addRange(rangeDef: String, forceLog: Boolean = false) {
     require(rangeDef.contains("-")) { "Incorrect input $rangeDef" }
     val range = rangeDef.split("-").let { it[0].toLong() to it[1].toLong() }
     log("current: $this", forceLog)
     log("add $range", forceLog)
 
-    val index = binarySearch(range, comparator = { candidate, element ->
-        log("$candidate : $element", forceLog)
-        when {
-            element.first in candidate.first..candidate.second -> 0
-            element.second in candidate.first..candidate.second -> 0
-            element.first < candidate.first -> 1
-            element.first > candidate.second -> -1
-            else -> TODO()
-        }
-    })
+    val index = binarySearch(
+        range,
+        comparator = { candidate, element ->
+            log("$candidate : $element", forceLog)
+            ingredientsRangesComparator(candidate, element)
+        })
     log("index: $index", forceLog)
 
     if (index < 0) {
@@ -113,7 +119,7 @@ fun MutableList<Pair<Long, Long>>.containsProduct(productId: String): Boolean {
     return any { numericId >= it.first && numericId <= it.second }
 }
 
-fun sumRanges(ranges: List<Pair<Long, Long>>, forceLog: Boolean = false) : Long {
+fun sumRanges(ranges: List<Pair<Long, Long>>, forceLog: Boolean = false): Long {
     return ranges.fold(0L) { acc, input ->
         log("" + input, forceLog)
         val x = (input.second + 1 - input.first)
