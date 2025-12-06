@@ -12,18 +12,14 @@ object Day06TestData {
 }
 
 fun main() {
-    fun part1(input: List<String>): BigInteger =
-        with(Calculator(mode = Calculator.Mode.MODE_1)) {
-            setInput(input)
-            return results.fold(BigInteger.ZERO) { acc, value -> acc + value }
-        }
+    fun Calculator.process(input: List<String>): BigInteger {
+        setInput(input)
+        return results.fold(BigInteger.ZERO) { acc, value -> acc + value }
+    }
 
-    fun part2(input: List<String>): BigInteger =
-        with(Calculator(mode = Calculator.Mode.MODE_2)) {
-            setInput(input)
-            return results.fold(BigInteger.ZERO) { acc, value -> acc + value }
-        }
+    fun part1(input: List<String>): BigInteger = Calculator(mode = Calculator.Mode.MODE_1).process(input)
 
+    fun part2(input: List<String>): BigInteger = Calculator(mode = Calculator.Mode.MODE_2).process(input)
 
     val testInput = Day06TestData.INPUT
     check(part1(testInput) == Day06TestData.EXPECTED_PART_1_RESULT)
@@ -33,6 +29,57 @@ fun main() {
     val input = readInput("Day06")
     part1(input).println()
     part2(input).println()
+}
+
+class Calculator(val mode: Mode) {
+    enum class Mode { MODE_1, MODE_2 }
+    enum class Operation { ADDITION, MULTIPLICATION, }
+
+    var operations = emptyList<Operation>()
+        private set
+    lateinit var parser: NumbersParser
+        private set
+
+    fun setInput(input: List<String>) {
+        val operationsLine = input.last().trim()
+        init(
+            when (mode) {
+                Mode.MODE_1 -> operationsLine
+                Mode.MODE_2 -> operationsLine.reversed()
+            }
+        )
+        val parserInput = input.dropLast(1)
+        parser = when (mode) {
+            Mode.MODE_1 -> Mode1NumbersParser(parserInput)
+            Mode.MODE_2 -> Mode2NumbersParser(parserInput)
+        }
+    }
+
+    private fun init(initializationLine: String) {
+        operations = initializationLine.split("""\s+""".toRegex())
+            .map { char ->
+                when (char) {
+                    "+" -> Operation.ADDITION
+                    "*" -> Operation.MULTIPLICATION
+                    else -> throw IllegalArgumentException("unexpected operation: [$char]")
+                }
+            }
+    }
+
+    val results: Sequence<BigInteger>
+        get() = parser.columns.mapIndexed { index, ints ->
+            val op = operations[index]
+            val initialValue = when (op) {
+                Operation.ADDITION -> BigInteger.ZERO
+                Operation.MULTIPLICATION -> BigInteger.ONE
+            }
+            ints.fold(initialValue) { acc, number ->
+                when (op) {
+                    Operation.ADDITION -> acc + number.toBigInteger()
+                    Operation.MULTIPLICATION -> acc * number.toBigInteger()
+                }
+            }
+        }
 }
 
 interface NumbersParser {
@@ -103,57 +150,6 @@ class Mode2NumbersParser(input: List<String>) : NumbersParser {
                         yield(buffer.toList())
                         return@sequence
                     }
-                }
-            }
-        }
-}
-
-class Calculator(val mode: Mode) {
-    enum class Mode { MODE_1, MODE_2 }
-    enum class Operation { ADDITION, MULTIPLICATION, }
-
-    var operations = emptyList<Operation>()
-        private set
-    lateinit var parser: NumbersParser
-        private set
-
-    fun setInput(input: List<String>) {
-        val operationsLine = input.last().trim()
-        init(
-            when (mode) {
-                Mode.MODE_1 -> operationsLine
-                Mode.MODE_2 -> operationsLine.reversed()
-            }
-        )
-        val parserInput = input.dropLast(1)
-        parser = when (mode) {
-            Mode.MODE_1 -> Mode1NumbersParser(parserInput)
-            Mode.MODE_2 -> Mode2NumbersParser(parserInput)
-        }
-    }
-
-    private fun init(initializationLine: String) {
-        operations = initializationLine.split("""\s+""".toRegex())
-            .map { char ->
-                when (char) {
-                    "+" -> Operation.ADDITION
-                    "*" -> Operation.MULTIPLICATION
-                    else -> throw IllegalArgumentException("unexpected operation: [$char]")
-                }
-            }
-    }
-
-    val results: Sequence<BigInteger>
-        get() = parser.columns.mapIndexed { index, ints ->
-            val op = operations[index]
-            val initialValue = when (op) {
-                Operation.ADDITION -> BigInteger.ZERO
-                Operation.MULTIPLICATION -> BigInteger.ONE
-            }
-            ints.fold(initialValue) { acc, number ->
-                when (op) {
-                    Operation.ADDITION -> acc + number.toBigInteger()
-                    Operation.MULTIPLICATION -> acc * number.toBigInteger()
                 }
             }
         }
