@@ -50,7 +50,7 @@ fun main() {
     check(part1(testInput) == Day05TestData.EXPECTED_PART_1_RESULT)
     check(part2(testInput) == Day05TestData.EXPECTED_PART_2_RESULT)
 
-    // Read the input from the `src/Day04.txt` file.
+    // Read the input from the `src/Day05.txt` file.
     val input = readInput("Day05")
     part1(input).println()
     part2(input).println()
