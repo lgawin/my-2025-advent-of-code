@@ -1,7 +1,5 @@
 import java.math.BigInteger
 
-private const val LOG_ALL = false
-
 object Day06TestData {
     val INPUT: List<String> = listOf(
         "123 328  51 64 ",
@@ -9,57 +7,23 @@ object Day06TestData {
         "  6 98  215 314",
         "*   +   *   +  ",
     )
-    val EXPECTED_PART_1_RESULT = BigInteger.valueOf(4277556L)
-    val EXPECTED_PART_2_RESULT = BigInteger.valueOf(3263827L)
+    val EXPECTED_PART_1_RESULT: BigInteger = BigInteger.valueOf(4277556L)
+    val EXPECTED_PART_2_RESULT: BigInteger = BigInteger.valueOf(3263827L)
 }
 
 fun main() {
-    fun part1(input: List<String>, forceLog: Boolean = false): BigInteger {
-        val delimiter = """\s+""".toRegex()
-        val operations = input.last().trim().split(delimiter)
-        operations.forEach { log(it, forceLog) }
-
-        val results = operations.map {
-            when (it) {
-                "+" -> BigInteger.ZERO
-                "*" -> BigInteger.ONE
-                else -> TODO("wtf")
-            }
-        }.toMutableList()
-        input.dropLast(1).forEach { line ->
-            val numbers = line.trim().split(delimiter)
-                .map { BigInteger(it) }
-                .withIndex()
-            numbers.forEach { (index, number) ->
-                val op = operations[index]
-                when (op) {
-                    "+" -> results[index] += number
-                    "*" -> results[index] *= number
-                    else -> TODO("wtf")
-                }
-            }
-            log("" + results, forceLog)
+    fun part1(input: List<String>): BigInteger =
+        with(Calculator(mode = Calculator.Mode.MODE_1)) {
+            setInput(input)
+            return results.fold(BigInteger.ZERO) { acc, value -> acc + value }
         }
-        return results.fold(BigInteger.ZERO) { acc, result -> acc + result }.also { log("" + it, forceLog) }
-    }
 
-    fun part2(input: List<String>, forceLog: Boolean = false): BigInteger {
-        val calculator = Calculator().apply { init(input.last()) }
-        val parser = NumbersParser(input.dropLast(1))
+    fun part2(input: List<String>): BigInteger =
+        with(Calculator(mode = Calculator.Mode.MODE_2)) {
+            setInput(input)
+            return results.fold(BigInteger.ZERO) { acc, value -> acc + value }
+        }
 
-        val result = calculator.operations.asSequence().zip(parser.columns)
-            .map { (operation, tokens) ->
-                tokens.fold(if (operation == Calculator.Operation.ADDITION) BigInteger.ZERO else BigInteger.ONE) { acc, number ->
-                    when (operation) {
-                        Calculator.Operation.ADDITION -> acc + number.toBigInteger()
-                        Calculator.Operation.MULTIPLICATION -> acc * number.toBigInteger()
-                    }
-                }.also { log("Interim result: $it", forceLog) }
-            }
-            .fold(BigInteger.ZERO) { a, b -> a + b }
-            .also { log("Result: $it", forceLog) }
-        return result
-    }
 
     val testInput = Day06TestData.INPUT
     check(part1(testInput) == Day06TestData.EXPECTED_PART_1_RESULT)
@@ -71,20 +35,45 @@ fun main() {
     part2(input).println()
 }
 
-sealed interface Token {
-    data object EndOfColumn : Token
-    data object EndOfInput : Token
-
-    @JvmInline
-    value class Number(val value: Int) : Token
+interface NumbersParser {
+    val columns: Sequence<List<Int>>
 }
 
-class NumbersParser(input: List<String>) {
+class Mode1NumbersParser(input: List<String>) : NumbersParser {
+    private val lines = input
+
+    init {
+        log("Input $lines")
+    }
+
+    override val columns: Sequence<List<Int>>
+        get() {
+            return sequence {
+                val delimiter = """\s+""".toRegex()
+                val parsedRows = lines.map { line ->
+                    line.trim().split(delimiter).map { it.toInt() }
+                }
+                (0..parsedRows.size).forEach { index ->
+                    yield(parsedRows.map { it[index] })
+                }
+            }
+        }
+}
+
+class Mode2NumbersParser(input: List<String>) : NumbersParser {
     var column = 0
     private val lines = input.map { it.reversed() }
 
     init {
         log("Input $lines")
+    }
+
+    sealed interface Token {
+        data object EndOfColumn : Token
+        data object EndOfInput : Token
+
+        @JvmInline
+        value class Number(val value: Int) : Token
     }
 
     fun getNextToken(): Token = lines.mapNotNull { it.drop(column).firstOrNull() }
@@ -99,7 +88,7 @@ class NumbersParser(input: List<String>) {
             }
         }
 
-    val columns: Sequence<List<Int>>
+    override val columns: Sequence<List<Int>>
         get() = sequence {
             var buffer = mutableListOf<Int>()
             while (true) {
@@ -117,21 +106,34 @@ class NumbersParser(input: List<String>) {
                 }
             }
         }
-
 }
 
-class Calculator {
-    enum class Operation {
-        ADDITION, MULTIPLICATION,
-    }
+class Calculator(val mode: Mode) {
+    enum class Mode { MODE_1, MODE_2 }
+    enum class Operation { ADDITION, MULTIPLICATION, }
 
     var operations = emptyList<Operation>()
         private set
-    var currentResults = emptyList<BigInteger>()
+    lateinit var parser: NumbersParser
         private set
 
-    fun init(initializationLine: String) {
-        operations = initializationLine.trim().reversed().split("""\s+""".toRegex())
+    fun setInput(input: List<String>) {
+        val operationsLine = input.last().trim()
+        init(
+            when (mode) {
+                Mode.MODE_1 -> operationsLine
+                Mode.MODE_2 -> operationsLine.reversed()
+            }
+        )
+        val parserInput = input.dropLast(1)
+        parser = when (mode) {
+            Mode.MODE_1 -> Mode1NumbersParser(parserInput)
+            Mode.MODE_2 -> Mode2NumbersParser(parserInput)
+        }
+    }
+
+    private fun init(initializationLine: String) {
+        operations = initializationLine.split("""\s+""".toRegex())
             .map { char ->
                 when (char) {
                     "+" -> Operation.ADDITION
@@ -139,14 +141,20 @@ class Calculator {
                     else -> throw IllegalArgumentException("unexpected operation: [$char]")
                 }
             }
-        currentResults = operations.map {
-            when (it) {
+    }
+
+    val results: Sequence<BigInteger>
+        get() = parser.columns.mapIndexed { index, ints ->
+            val op = operations[index]
+            val initialValue = when (op) {
                 Operation.ADDITION -> BigInteger.ZERO
                 Operation.MULTIPLICATION -> BigInteger.ONE
             }
+            ints.fold(initialValue) { acc, number ->
+                when (op) {
+                    Operation.ADDITION -> acc + number.toBigInteger()
+                    Operation.MULTIPLICATION -> acc * number.toBigInteger()
+                }
+            }
         }
-    }
 }
-
-@Suppress("SimplifyBooleanWithConstants")
-private fun log(s: String, forceLog: Boolean = false) = if (LOG_ALL || forceLog) println(s) else Unit
