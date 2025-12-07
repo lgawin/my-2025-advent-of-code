@@ -20,34 +20,12 @@ object Day07TestData {
         "...............",
     )
     const val EXPECTED_PART_1_RESULT = 21
-    const val EXPECTED_PART_2_RESULT = 0
+    const val EXPECTED_PART_2_RESULT = 40
 }
 
 fun main() = with(Logger(logAll = false)) {
-
     fun part1(input: List<String>) = input.fold(TachyonMinifoldState()) { acc, string ->
-        var specialCharacterIndex = string.indexOfFirst { it != '.' }
-        var beams = acc.beams
-        var newSplits = 0
-        while (specialCharacterIndex != -1) {
-            val specialCharacter = string[specialCharacterIndex]
-            beams = when (specialCharacter) {
-                'S' -> beams.plus(specialCharacterIndex)
-                '^' -> {
-                    if (acc.beams.contains(specialCharacterIndex)) newSplits++
-                    beams.minus(specialCharacterIndex)
-                        .plus(specialCharacterIndex - 1)
-                        .plus(specialCharacterIndex + 1)
-                }
-
-                else -> error("Unexpected character '$specialCharacter'")
-            }
-            val nextSpecialIndex = string.drop(specialCharacterIndex + 1).indexOfFirst { it != '.' }
-            if (nextSpecialIndex != -1) {
-                specialCharacterIndex += 1 + nextSpecialIndex
-            } else specialCharacterIndex = -1
-        }
-        TachyonMinifoldState(acc.splits + newSplits, beams.toSortedSet())
+        acc.applyInput(string)
     }.splits
 
     fun part2(input: List<String>) = input.fold(0) { acc, input ->
@@ -70,6 +48,31 @@ data class TachyonMinifoldState(
     // in which columns tachyon beams exists
     val beams: Set<Int> = emptySet(),
 )
+
+fun TachyonMinifoldState.applyInput(string: String): TachyonMinifoldState {
+    var specialCharacterIndex = string.indexOfFirst { it != '.' }
+    var beams = beams
+    var newSplits = 0
+    while (specialCharacterIndex != -1) {
+        val specialCharacter = string[specialCharacterIndex]
+        beams = when (specialCharacter) {
+            'S' -> beams.plus(specialCharacterIndex)
+            '^' -> {
+                if (this.beams.contains(specialCharacterIndex)) newSplits++
+                beams.minus(specialCharacterIndex)
+                    .plus(specialCharacterIndex - 1)
+                    .plus(specialCharacterIndex + 1)
+            }
+
+            else -> error("Unexpected character '$specialCharacter'")
+        }
+        val nextSpecialIndex = string.drop(specialCharacterIndex + 1).indexOfFirst { it != '.' }
+        if (nextSpecialIndex != -1) {
+            specialCharacterIndex += 1 + nextSpecialIndex
+        } else specialCharacterIndex = -1
+    }
+    return TachyonMinifoldState(splits + newSplits, beams.toSortedSet())
+}
 
 interface LoggerContext {
     fun log(any: Any, forceLog: Boolean = false)
